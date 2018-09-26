@@ -1,0 +1,32 @@
+#!/bin/bash
+
+# Get the name of the latex file without extension
+filename=$(basename -- "$TEXPAD_ROOTFILE")
+name="${filename%.*}"
+
+# Get the directory where the script is located
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do 
+  DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ $SOURCE != /* ]] && SOURCE="$DIR/$SOURCE" 
+done
+DIR="$( cd -P "$( dirname "$SOURCE" )" >/dev/null && pwd )"
+
+# Create temp directory if it does not already exist
+[ -d temp ] || mkdir temp
+
+# Copy source files to temp and change to temp as working directory
+cp "$name".bib temp/"$name".bib 
+cp "$name".md temp/"$name".md
+cd temp 
+
+echo "Step 1: executing pandoc on $name.md and $name.bib"
+pandoc --filter pandoc-citeproc --biblio="$name".bib --from=markdown --to=latex --standalone --csl="$DIR"/csl/journal-of-computer-information-systems.csl "$name".md -o "$name".tex
+echo "Step 2: executing pdflatex on temp/$name.tex"
+pdflatex "$name".tex
+echo "Step 3: copy resulting pdf to $name.pdf"
+cp "$name".pdf ../"$name".pdf
+echo "Step 4: Cleaning up by removing temp folder"
+rm -rf ../temp
+echo "Generation of pdf by academic-md done!"
